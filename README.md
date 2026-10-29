@@ -1,4 +1,6 @@
-# Buttonsmith
+<p align="center"><img src="internal/ui/icon.svg" alt="Buttonsmith icon" width="128"></p>
+
+<h1 align="center">Buttonsmith</h1>
 
 Buttonsmith remaps mouse and trackball buttons on Linux. It adds
 click-and-drag gestures and smooth scrolling. It works on Wayland and is
