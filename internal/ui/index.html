@@ -451,11 +451,16 @@ const PAGES = {
     if (!model.buttons.length) out.push(el("div", { class: "empty" }, "No buttons remapped yet."));
     model.buttons.forEach((b, i) => out.push(buttonCard(b, i)));
 
+    // Offer the buttons the selected mouse actually has. Left is left out
+    // on purpose: remapping it can make the mouse unusable.
     const used = new Set(model.buttons.map((b) => b.name));
-    const manual = el("select", { onchange: (e) => {
+    const reported = meta.devices.filter(deviceMatches).flatMap((dev) => dev.buttons);
+    const choices = (reported.length ? [...new Set(reported)] : ["right", "middle", "back", "forward"])
+      .filter((n) => n !== "left" && !used.has(n));
+    const manual = choices.length ? el("select", { onchange: (e) => {
       if (e.target.value) addButton(e.target.value);
     } }, el("option", { value: "" }, "Add by name…"),
-      ["middle", "back", "forward", "task", "right"].filter((n) => !used.has(n)).map((n) => el("option", { value: n }, labelFor(n))));
+      choices.map((n) => el("option", { value: n }, labelFor(n)))) : null;
     out.push(el("div", { class: "add-bar" },
       el("button", { class: "primary", type: "button", onclick: openDetect }, "+ Add button (press it)"),
       manual));
@@ -492,9 +497,7 @@ const PAGES = {
 
   device() {
     const d = model.device;
-    const matches = (dev) => (!d.vendor || dev.vendor === d.vendor.toLowerCase().replace(/^0x/, "")) &&
-      (!d.product || dev.product === d.product.toLowerCase().replace(/^0x/, "")) &&
-      (!d.name || dev.names.some((n) => n.toLowerCase().includes(d.name.toLowerCase())));
+    const matches = deviceMatches;
     const mice = meta.devices.filter((x) => x.mouse);
     const field = (key, ph) => el("input", { type: "text", class: "mono", value: d[key] || "", placeholder: ph,
       oninput: (e) => { d[key] = e.target.value.trim(); changed(); } });
@@ -524,6 +527,14 @@ const PAGES = {
     return out;
   },
 };
+
+// deviceMatches mirrors config.DeviceMatch.Matches for the edited model.
+function deviceMatches(dev) {
+  const d = model.device, hex = (s) => s.toLowerCase().replace(/^0x/, "");
+  return (!d.vendor || dev.vendor === hex(d.vendor)) &&
+    (!d.product || dev.product === hex(d.product)) &&
+    (!d.name || dev.names.some((n) => n.toLowerCase().includes(d.name.toLowerCase())));
+}
 
 function toggle(label, hint, obj, key) {
   return el("div", { class: "setting" },

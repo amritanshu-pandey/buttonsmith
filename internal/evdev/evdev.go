@@ -226,7 +226,8 @@ type NodeInfo struct {
 	Name    string
 	Vendor  uint16
 	Product uint16
-	Motion  bool // reports REL_X/REL_Y, i.e. a mouse-like node
+	Motion  bool     // reports REL_X/REL_Y, i.e. a mouse-like node
+	Buttons []uint16 // mouse buttons (BTN_LEFT..BTN_TASK) it reports
 }
 
 // ListNodes enumerates /dev/input/event* via /sys/class/input.
@@ -247,21 +248,39 @@ func ListNodes() []NodeInfo {
 			Name:    read("name"),
 			Vendor:  hex("id/vendor"),
 			Product: hex("id/product"),
-			Motion:  relXY(read("capabilities/rel")),
+			Motion:  hasBits(read("capabilities/rel"), REL_X, REL_Y),
+			Buttons: mouseButtons(read("capabilities/key")),
 		})
 	}
 	sort.Slice(nodes, func(i, j int) bool { return eventNum(nodes[i].Path) < eventNum(nodes[j].Path) })
 	return nodes
 }
 
-// relXY reports whether a sysfs capability bitmap (hex words, lowest last)
-// has both REL_X and REL_Y.
-func relXY(caps string) bool {
-	if caps == "" {
-		return false
+// hasBits reports whether a sysfs capability bitmap has all the given bits
+// set. The bitmap is space-separated 64-bit hex words, highest first.
+func hasBits(caps string, bits ...uint16) bool {
+	words := strings.Fields(caps)
+	for _, b := range bits {
+		i := len(words) - 1 - int(b/64)
+		if i < 0 {
+			return false
+		}
+		w, err := strconv.ParseUint(words[i], 16, 64)
+		if err != nil || w&(1<<(b%64)) == 0 {
+			return false
+		}
 	}
-	low, err := strconv.ParseUint(caps[len(caps)-1:], 16, 8)
-	return err == nil && low&3 == 3
+	return len(bits) > 0
+}
+
+func mouseButtons(caps string) []uint16 {
+	var out []uint16
+	for b := uint16(BTN_LEFT); b <= BTN_TASK; b++ {
+		if hasBits(caps, b) {
+			out = append(out, b)
+		}
+	}
+	return out
 }
 
 func eventNum(path string) int {

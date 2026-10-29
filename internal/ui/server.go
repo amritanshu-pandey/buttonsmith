@@ -271,6 +271,7 @@ type deviceInfo struct {
 	Names    []string `json:"names"`
 	Mouse    bool     `json:"mouse"`
 	Readable bool     `json:"readable"`
+	Buttons  []string `json:"buttons"` // config names of the mouse buttons it reports
 }
 
 type metaResponse struct {
@@ -319,12 +320,17 @@ func devices() []deviceInfo {
 		id := fmt.Sprintf("%04x:%04x", n.Vendor, n.Product)
 		d, ok := byID[id]
 		if !ok {
-			d = &deviceInfo{Vendor: fmt.Sprintf("%04x", n.Vendor), Product: fmt.Sprintf("%04x", n.Product), Names: []string{}}
+			d = &deviceInfo{Vendor: fmt.Sprintf("%04x", n.Vendor), Product: fmt.Sprintf("%04x", n.Product), Names: []string{}, Buttons: []string{}}
 			byID[id] = d
 			order = append(order, id)
 		}
 		if !contains(d.Names, n.Name) {
 			d.Names = append(d.Names, n.Name)
+		}
+		for _, b := range n.Buttons {
+			if name := action.InputName(b); !contains(d.Buttons, name) {
+				d.Buttons = append(d.Buttons, name)
+			}
 		}
 		if n.Motion {
 			d.Mouse = true
