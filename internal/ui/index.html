@@ -558,7 +558,7 @@ function statusBanner(out) {
   const st = lastStatus;
   if (!st) return;
   if (!st.service.installed) {
-    out.push(el("div", { class: "banner" }, "The background service isn't installed, so changes won't take effect yet. Install the package, or run ", el("code", {}, "./install.sh"), " from the project folder."));
+    out.push(el("div", { class: "banner" }, "The background service isn't installed, so changes won't take effect yet. Install the package, or run ", el("code", {}, "./scripts/install.sh"), " from the project folder."));
   } else if (st.device.present && !st.device.readable) {
     const m = meta.devices.find((x) => x.mouse && deviceMatches(x));
     out.push(el("div", { class: "banner bad" }, "No permission to read the mouse. ",

@@ -90,8 +90,11 @@ Your config in `~/.config/buttonsmith` is kept.
 
 ### From source, for the current user
 
+Use this on distributions without `.deb` or `.rpm` packages (for example
+Arch or Gentoo), or during development:
+
 ```sh
-./install.sh
+./scripts/install.sh
 ```
 
 The script:
@@ -103,8 +106,7 @@ The script:
 4. Installs, enables and starts the `buttonsmith` systemd user service.
 5. Adds **Buttonsmith** to the application menu.
 
-It also removes an older install under the previous name, `mousefix`, and
-moves its config.
+Run it again after changes to rebuild and restart the service.
 
 Do not use both install methods at the same time. Files in your home
 directory take priority over the package.

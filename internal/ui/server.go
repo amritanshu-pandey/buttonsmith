@@ -145,7 +145,7 @@ func openWindow(url string, closed func()) {
 
 // startQtWindow runs the embedded PyQt6 WebEngine window. The icon is
 // written to the cache directory as a fallback for when the icon theme
-// doesn't have it (e.g. not installed via install.sh).
+// doesn't have it (for example when running from the source tree).
 func startQtWindow(url string) (*exec.Cmd, error) {
 	python, err := exec.LookPath("python3")
 	if err != nil {
@@ -281,8 +281,7 @@ func (s *Server) putConfig(w http.ResponseWriter, r *http.Request) {
 // before the UI first rewrites it. It returns the backup path if it made one.
 func (s *Server) backupOnce() (string, error) {
 	old, err := os.ReadFile(s.cfgPath)
-	if errors.Is(err, os.ErrNotExist) || (strings.HasPrefix(string(old), config.ModelHeader[:40]) ||
-		strings.HasPrefix(string(old), "# mousefix configuration, written by")) {
+	if errors.Is(err, os.ErrNotExist) || strings.HasPrefix(string(old), config.ModelHeader[:40]) {
 		return "", nil
 	}
 	if err != nil {

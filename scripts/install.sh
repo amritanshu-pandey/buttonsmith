@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Build and install Buttonsmith for the current user.
+# Build and install Buttonsmith for the current user, into ~/.local.
+# For distros without .deb/.rpm packages, and for development.
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 id=buttonsmith
 appid=io.github.amritanshu_pandey.Buttonsmith
@@ -18,27 +19,15 @@ echo "==> building"
 go build -o "$id" "./cmd/$id"
 install -Dm755 "$id" "$bin"
 
-# Migrate from the old name ("mousefix").
-if systemctl --user cat mousefix.service &>/dev/null; then
-    echo "==> removing the old mousefix service"
-    systemctl --user disable --now mousefix.service || true
-fi
-rm -f "$unit_dir/mousefix.service" "$HOME/.local/bin/mousefix" "$apps/mousefix.desktop"
-if [[ -d "$config_home/mousefix" && ! -e "$config_home/$id" ]]; then
-    echo "==> moving config $config_home/mousefix -> $config_home/$id"
-    mv "$config_home/mousefix" "$config_home/$id"
-fi
-
 if [[ ! -e "$cfg" ]]; then
     echo "==> writing default config to $cfg"
     mkdir -p "$(dirname "$cfg")"
     "$bin" example-config > "$cfg"
 fi
 
-if ! cmp -s "contrib/70-$id.rules" "$rule" || [[ -e /etc/udev/rules.d/70-mousefix.rules ]]; then
+if ! cmp -s "contrib/70-$id.rules" "$rule"; then
     echo "==> installing udev rule $rule (needs sudo)"
     sudo install -Dm644 "contrib/70-$id.rules" "$rule"
-    sudo rm -f /etc/udev/rules.d/70-mousefix.rules
     sudo udevadm control --reload-rules
     sudo udevadm trigger --subsystem-match=input --subsystem-match=misc --action=change
 fi
