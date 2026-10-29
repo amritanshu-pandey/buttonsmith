@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"linux-mouse-tools/internal/evdev"
+	"github.com/amritanshu-pandey/buttonsmith/internal/evdev"
 )
 
 func TestParse(t *testing.T) {

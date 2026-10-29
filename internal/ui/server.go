@@ -24,15 +24,22 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"linux-mouse-tools/internal/action"
-	"linux-mouse-tools/internal/config"
-	"linux-mouse-tools/internal/evdev"
+	"github.com/amritanshu-pandey/buttonsmith/internal/action"
+	"github.com/amritanshu-pandey/buttonsmith/internal/app"
+	"github.com/amritanshu-pandey/buttonsmith/internal/config"
+	"github.com/amritanshu-pandey/buttonsmith/internal/evdev"
 )
 
 //go:embed index.html
 var indexHTML string
 
-const unit = "mousefix.service"
+//go:embed icon.svg
+var iconSVG []byte
+
+//go:embed window.py
+var windowPy string
+
+const unit = app.ID + ".service"
 
 type Server struct {
 	cfgPath string
@@ -60,12 +67,15 @@ func Run(cfgPath, addr string, noOpen bool) error {
 	}
 	s := &Server{cfgPath: cfgPath, token: newToken(), host: ln.Addr().String()}
 	url := fmt.Sprintf("http://%s/?token=%s", s.host, s.token)
-	fmt.Fprintf(os.Stderr, "mousefix ui: %s\n", url)
+	fmt.Fprintf(os.Stderr, app.ID+" ui: %s\n", url)
 
 	srv := &http.Server{Handler: s.Handler(), ReadHeaderTimeout: 10 * time.Second}
 	go s.exitWhenClosed(srv)
 	if !noOpen {
-		openWindow(url)
+		openWindow(url, func() {
+			fmt.Fprintln(os.Stderr, app.ID+" ui: window closed, exiting")
+			srv.Shutdown(context.Background())
+		})
 	}
 	if err := srv.Serve(ln); !errors.Is(err, http.ErrServerClosed) {
 		return err
@@ -90,16 +100,31 @@ func (s *Server) exitWhenClosed(srv *http.Server) {
 		if idleSince.IsZero() {
 			idleSince = time.Now()
 		} else if time.Since(idleSince) > grace {
-			fmt.Fprintln(os.Stderr, "mousefix ui: window closed, exiting")
+			fmt.Fprintln(os.Stderr, app.ID+" ui: window closed, exiting")
 			srv.Shutdown(context.Background())
 			return
 		}
 	}
 }
 
-// openWindow prefers a chromeless Chromium-style app window and falls back
-// to the default browser.
-func openWindow(url string) {
+// openWindow shows the UI in the native Qt window (closed is called when it
+// exits), falling back to a Chromium app window or the default browser.
+func openWindow(url string, closed func()) {
+	if cmd, err := startQtWindow(url); err == nil {
+		exited := make(chan error, 1)
+		go func() { exited <- cmd.Wait() }()
+		select {
+		case err := <-exited:
+			if err == nil {
+				closed() // closed straight away by the user
+				return
+			}
+			fmt.Fprintf(os.Stderr, "%s ui: Qt window unavailable (%v), using a browser\n", app.ID, err)
+		case <-time.After(3 * time.Second):
+			go func() { <-exited; closed() }()
+			return
+		}
+	}
 	for _, b := range []string{"google-chrome", "chromium-browser", "chromium", "brave-browser", "microsoft-edge"} {
 		if path, err := exec.LookPath(b); err == nil {
 			cmd := exec.Command(path, "--app="+url, "--window-size=1000,760")
@@ -114,12 +139,36 @@ func openWindow(url string) {
 		go cmd.Wait()
 		return
 	}
-	fmt.Fprintln(os.Stderr, "mousefix ui: open the URL above in a browser")
+	fmt.Fprintln(os.Stderr, app.ID+" ui: open the URL above in a browser")
+}
+
+// startQtWindow runs the embedded PyQt6 WebEngine window. The icon is
+// written to the cache directory as a fallback for when the icon theme
+// doesn't have it (e.g. not installed via install.sh).
+func startQtWindow(url string) (*exec.Cmd, error) {
+	python, err := exec.LookPath("python3")
+	if err != nil {
+		return nil, err
+	}
+	iconPath := ""
+	if dir, err := os.UserCacheDir(); err == nil {
+		iconPath = filepath.Join(dir, app.ID, "icon.svg")
+		if os.MkdirAll(filepath.Dir(iconPath), 0o755) != nil || os.WriteFile(iconPath, iconSVG, 0o644) != nil {
+			iconPath = ""
+		}
+	}
+	cmd := exec.Command(python, "-I", "-c", windowPy, app.AppID, app.Name, iconPath, url)
+	cmd.Stdout, cmd.Stderr = os.Stderr, os.Stderr
+	return cmd, cmd.Start()
 }
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", s.index)
+	mux.HandleFunc("GET /icon.svg", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/svg+xml")
+		w.Write(iconSVG)
+	})
 	mux.HandleFunc("GET /api/config", s.getConfig)
 	mux.HandleFunc("PUT /api/config", s.putConfig)
 	mux.HandleFunc("GET /api/meta", s.meta)
@@ -159,8 +208,10 @@ func writeErr(w http.ResponseWriter, status int, err error) {
 func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'")
-	page := strings.Replace(indexHTML, "__TOKEN__", s.token, 1)
+	page := strings.ReplaceAll(indexHTML, "__TOKEN__", s.token)
 	page = strings.Replace(page, "__CONFIG_PATH__", htmlEscape(s.cfgPath), 1)
+	page = strings.ReplaceAll(page, "__APP_NAME__", app.Name)
+	page = strings.ReplaceAll(page, "__APP_ID__", app.ID)
 	fmt.Fprint(w, page)
 }
 
@@ -228,7 +279,8 @@ func (s *Server) putConfig(w http.ResponseWriter, r *http.Request) {
 // before the UI first rewrites it. It returns the backup path if it made one.
 func (s *Server) backupOnce() (string, error) {
 	old, err := os.ReadFile(s.cfgPath)
-	if errors.Is(err, os.ErrNotExist) || strings.HasPrefix(string(old), "# mousefix configuration, written by") {
+	if errors.Is(err, os.ErrNotExist) || (strings.HasPrefix(string(old), config.ModelHeader[:40]) ||
+		strings.HasPrefix(string(old), "# mousefix configuration, written by")) {
 		return "", nil
 	}
 	if err != nil {
@@ -483,7 +535,7 @@ func (s *Server) detect(w http.ResponseWriter, r *http.Request) {
 
 	if getServiceStatus().Active == "active" {
 		if err := exec.Command("systemctl", "--user", "stop", unit).Run(); err != nil {
-			sse.send("fail", map[string]string{"error": "could not pause the mousefix service: " + err.Error()})
+			sse.send("fail", map[string]string{"error": "could not pause the background service: " + err.Error()})
 			return
 		}
 		sse.send("paused", nil)

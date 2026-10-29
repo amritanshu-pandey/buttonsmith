@@ -11,19 +11,20 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"linux-mouse-tools/internal/action"
+	"github.com/amritanshu-pandey/buttonsmith/internal/action"
+	"github.com/amritanshu-pandey/buttonsmith/internal/app"
 )
 
 //go:embed example.toml
 var Example string
 
-// DefaultPath is $XDG_CONFIG_HOME/mousefix/config.toml.
+// DefaultPath is $XDG_CONFIG_HOME/buttonsmith/config.toml.
 func DefaultPath() string {
 	base := os.Getenv("XDG_CONFIG_HOME")
 	if base == "" {
 		base = filepath.Join(os.Getenv("HOME"), ".config")
 	}
-	return filepath.Join(base, "mousefix", "config.toml")
+	return filepath.Join(base, app.ID, "config.toml")
 }
 
 // DeviceMatch selects the physical device to take over. All set fields

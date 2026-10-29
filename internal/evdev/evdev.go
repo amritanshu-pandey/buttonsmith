@@ -19,7 +19,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// Event types and codes used by mousefix (from linux/input-event-codes.h).
+// Event types and codes used here (from linux/input-event-codes.h).
 const (
 	EV_SYN = 0x00
 	EV_KEY = 0x01

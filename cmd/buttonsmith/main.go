@@ -1,4 +1,4 @@
-// Command mousefix remaps mouse buttons and smooths scrolling on Linux
+// Command buttonsmith remaps mouse buttons and smooths scrolling on Linux
 // (Wayland or X11) by grabbing the mouse via evdev and re-emitting events
 // through uinput.
 package main
@@ -16,24 +16,26 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"linux-mouse-tools/internal/action"
-	"linux-mouse-tools/internal/config"
-	"linux-mouse-tools/internal/engine"
-	"linux-mouse-tools/internal/evdev"
-	"linux-mouse-tools/internal/ui"
+	"github.com/amritanshu-pandey/buttonsmith/internal/action"
+	"github.com/amritanshu-pandey/buttonsmith/internal/app"
+	"github.com/amritanshu-pandey/buttonsmith/internal/config"
+	"github.com/amritanshu-pandey/buttonsmith/internal/engine"
+	"github.com/amritanshu-pandey/buttonsmith/internal/evdev"
+	"github.com/amritanshu-pandey/buttonsmith/internal/ui"
 )
 
-const usage = `mousefix - Mac Mouse Fix-style button remapping and smooth scrolling for Linux
+var usage = strings.ReplaceAll(`CMD - mouse button remapping, gestures and smooth scrolling for Linux
 
 Usage:
-  mousefix ui [-no-open]             open the settings window
-  mousefix run [-config PATH] [-v]   run the remapper (usually via systemd)
-  mousefix detect [-all]             show which codes your mouse's buttons send
-  mousefix list                      list input devices
-  mousefix check [-config PATH]      validate the config file
-  mousefix example-config            print a commented example config
+  CMD ui [-no-open]             open the settings window
+  CMD run [-config PATH] [-v]   run the remapper (usually via systemd)
+  CMD detect [-all]             show which codes your mouse's buttons send
+  CMD list                      list input devices
+  CMD check [-config PATH]      validate the config file
+  CMD example-config            print a commented example config
 
-Default config: ` + "$XDG_CONFIG_HOME/mousefix/config.toml\n"
+Default config: $XDG_CONFIG_HOME/CMD/config.toml
+`, "CMD", app.ID)
 
 func main() {
 	if len(os.Args) < 2 {
@@ -72,7 +74,7 @@ func main() {
 		os.Exit(2)
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "mousefix:", err)
+		fmt.Fprintln(os.Stderr, app.ID+":", err)
 		os.Exit(1)
 	}
 }
@@ -82,7 +84,7 @@ func main() {
 func loadOrDefault(path string) (*config.Config, error) {
 	cfg, err := config.Load(path)
 	if errors.Is(err, os.ErrNotExist) {
-		fmt.Fprintf(os.Stderr, "mousefix: %s not found, using built-in defaults (see `mousefix example-config`)\n", path)
+		fmt.Fprintf(os.Stderr, app.ID+": %s not found, using built-in defaults (see `%s example-config`)\n", path, app.ID)
 		return config.Parse(config.Example)
 	}
 	return cfg, err
@@ -97,7 +99,7 @@ func (s sink) Spawn(a action.Action)      { action.Spawn(a) }
 
 func logErr(err error) {
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "mousefix: write:", err)
+		fmt.Fprintln(os.Stderr, app.ID+": write:", err)
 	}
 }
 
@@ -236,10 +238,10 @@ func run(cfgPath string, verbose bool) error {
 	reload := func() {
 		newCfg, err := loadOrDefault(cfgPath)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "mousefix: keeping old config:", err)
+			fmt.Fprintln(os.Stderr, app.ID+": keeping old config:", err)
 			return
 		}
-		fmt.Fprintln(os.Stderr, "mousefix: config reloaded")
+		fmt.Fprintln(os.Stderr, app.ID+": config reloaded")
 		regrab := grabKey(newCfg) != grabKey(cfg)
 		eng.SetConfig(newCfg)
 		cfg = newCfg
@@ -276,19 +278,19 @@ func run(cfgPath string, verbose bool) error {
 			case errors.Is(err, errButtonsDown):
 				nextScan = now.Add(20 * time.Millisecond)
 				if !waitingRelease {
-					fmt.Fprintln(os.Stderr, "mousefix: waiting for buttons to be released before grabbing")
+					fmt.Fprintln(os.Stderr, app.ID+": waiting for buttons to be released before grabbing")
 					waitingRelease = true
 				}
 			case err != nil:
-				fmt.Fprintln(os.Stderr, "mousefix:", err)
+				fmt.Fprintln(os.Stderr, app.ID+":", err)
 			case srcs == nil && !waiting:
-				fmt.Fprintln(os.Stderr, "mousefix: waiting for device to appear…")
+				fmt.Fprintln(os.Stderr, app.ID+": waiting for device to appear…")
 				waiting = true
 			case srcs != nil:
 				waiting, waitingRelease = false, false
 				eng.SourceHiRes = [2]bool{}
 				for _, s := range srcs {
-					fmt.Fprintf(os.Stderr, "mousefix: grabbed %s (%s)\n", s.dev.Path, s.dev.Name)
+					fmt.Fprintf(os.Stderr, app.ID+": grabbed %s (%s)\n", s.dev.Path, s.dev.Name)
 					if s.pointer {
 						eng.SourceHiRes = [2]bool{s.dev.HasRel(evdev.REL_WHEEL_HI_RES), s.dev.HasRel(evdev.REL_HWHEEL_HI_RES)}
 					}
@@ -323,7 +325,7 @@ func run(cfgPath string, verbose bool) error {
 				eng.Handle(ev, srcs[i].pointer, now)
 			}
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "mousefix: lost %s: %v\n", srcs[i].dev.Path, err)
+				fmt.Fprintf(os.Stderr, app.ID+": lost %s: %v\n", srcs[i].dev.Path, err)
 				lost = true
 			}
 		}

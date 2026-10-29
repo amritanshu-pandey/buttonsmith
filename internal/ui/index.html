@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>mousefix</title>
+<title>__APP_NAME__</title>
+<link rel="icon" type="image/svg+xml" href="/icon.svg?token=__TOKEN__">
 <style>
 :root {
   --bg: #eff0f1; --panel: #fcfcfc; --text: #232629; --muted: #6e7175; --line: #d1d3d5;
@@ -25,7 +26,7 @@ body { font: 14px/1.45 "Noto Sans", system-ui, sans-serif; background: var(--bg)
 header { display: flex; align-items: center; gap: 16px; padding: 10px 18px; background: var(--panel);
          border-bottom: 1px solid var(--line); }
 .brand { font-weight: 600; font-size: 16px; display: flex; align-items: center; gap: 8px; }
-.brand svg { width: 20px; height: 20px; }
+.brand img { width: 24px; height: 24px; }
 .status { display: flex; flex-direction: column; font-size: 13px; margin-left: 8px; }
 .status .line { display: flex; align-items: center; gap: 6px; }
 .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
@@ -117,8 +118,8 @@ dialog .df { padding: 10px 18px; border-top: 1px solid var(--line); display: fle
 <body>
 <header>
   <div class="brand">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="2" width="14" height="20" rx="7"/><path d="M12 2v7M5 9h14"/></svg>
-    mousefix
+    <img src="/icon.svg?token=__TOKEN__" alt="">
+    __APP_NAME__
   </div>
   <div class="status">
     <div class="line"><span class="dot" id="svc-dot"></span><span id="svc-text">Checking service…</span></div>
@@ -503,7 +504,7 @@ const PAGES = {
       oninput: (e) => { d[key] = e.target.value.trim(); changed(); } });
     const out = [
       el("h1", {}, "Device"),
-      el("p", { class: "lead" }, "mousefix takes over one mouse; all other input devices are left alone. Changing the device needs a matching udev rule for read access (see README)."),
+      el("p", { class: "lead" }, "__APP_NAME__ takes over one mouse; all other input devices are left alone. Changing the device needs a matching udev rule for read access (see README)."),
     ];
     statusBanner(out);
     out.push(el("div", { class: "card" },
@@ -602,7 +603,7 @@ function openDetect() {
   });
   detectSource.onerror = () => {
     if (detectSource.readyState === EventSource.CLOSED) return;
-    status.textContent = "Lost connection to mousefix.";
+    status.textContent = "Lost connection to __APP_NAME__.";
     detectSource.close();
   };
   dlg.showModal();
@@ -625,7 +626,7 @@ function showStatus(st) {
   $("svc-dot").className = "dot " + (!svc.installed ? "warn" : running ? "ok" : svc.active === "failed" ? "bad" : "");
   $("svc-text").textContent = !svc.installed ? "Service not installed"
     : running ? "Running" + (svc.enabled === "enabled" ? " · starts at login" : "")
-    : svc.active === "failed" ? "Service failed: see journalctl --user -u mousefix" : "Stopped";
+    : svc.active === "failed" ? "Service failed: see journalctl --user -u __APP_ID__" : "Stopped";
   $("dev-dot").className = "dot " + (!dev.present ? "warn" : dev.readable ? "ok" : "bad");
   $("dev-text").textContent = !dev.configured ? "No device selected"
     : !dev.present ? "Mouse not connected" : dev.readable ? dev.name : dev.name + ": no permission";

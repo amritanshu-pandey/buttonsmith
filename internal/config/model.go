@@ -7,8 +7,9 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"linux-mouse-tools/internal/action"
-	"linux-mouse-tools/internal/evdev"
+	"github.com/amritanshu-pandey/buttonsmith/internal/action"
+	"github.com/amritanshu-pandey/buttonsmith/internal/app"
+	"github.com/amritanshu-pandey/buttonsmith/internal/evdev"
 )
 
 // Model is an editable, JSON-friendly form of the config file, used by the
@@ -91,10 +92,9 @@ func gestureFromRaw(v any, tableMode string) *ModelGesture {
 	return nil
 }
 
-const modelHeader = `# mousefix configuration, written by "mousefix ui".
-# See "mousefix example-config" for documentation of every option.
-
-`
+// ModelHeader starts every config file written from a Model.
+const ModelHeader = "# " + app.Name + " configuration, written by the settings window.\n" +
+	"# See \"" + app.ID + " example-config\" for documentation of every option.\n\n"
 
 // Encode renders the model as TOML and checks that it parses.
 func (m *Model) Encode() (string, error) {
@@ -136,7 +136,7 @@ func (m *Model) Encode() (string, error) {
 	}
 
 	var buf bytes.Buffer
-	buf.WriteString(modelHeader)
+	buf.WriteString(ModelHeader)
 	if err := toml.NewEncoder(&buf).Encode(f); err != nil {
 		return "", err
 	}

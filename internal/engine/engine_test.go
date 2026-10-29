@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"linux-mouse-tools/internal/action"
-	"linux-mouse-tools/internal/config"
-	"linux-mouse-tools/internal/evdev"
+	"github.com/amritanshu-pandey/buttonsmith/internal/action"
+	"github.com/amritanshu-pandey/buttonsmith/internal/config"
+	"github.com/amritanshu-pandey/buttonsmith/internal/evdev"
 )
 
 // recorder logs output as compact strings like "M:BTN_SIDE 1",

@@ -1,19 +1,22 @@
-# mousefix
+# Buttonsmith
 
-A Linux take on [Mac Mouse Fix](https://github.com/noah-nuebling/mac-mouse-fix):
-remap a mouse's extra buttons and add smooth, accelerated scrolling. It works
-on Wayland, and on X11.
+Remap mouse and trackball buttons, add click-and-drag gestures and smooth
+scrolling on Linux. Works on Wayland; made for KDE Plasma.
 
-Wayland doesn't let apps intercept or inject input, so mousefix works one
+Inspired by [Mac Mouse Fix](https://github.com/noah-nuebling/mac-mouse-fix)
+for macOS. Buttonsmith is an independent project, not affiliated with Mac
+Mouse Fix or KDE.
+
+Wayland doesn't let apps intercept or inject input, so Buttonsmith works one
 layer lower. It grabs your mouse's evdev device so the compositor no longer
 sees it. It then processes the events and sends the result back through
-virtual `uinput` devices ("mousefix pointer" and "mousefix keyboard"). It
+virtual `uinput` devices ("Buttonsmith pointer" and "Buttonsmith keyboard"). It
 doesn't depend on any particular compositor. Only the `kwin:` actions and
 presets are KDE-specific.
 
 ## Features
 
-| Mac Mouse Fix                     | mousefix                                                        |
+| Mac Mouse Fix feature             | Buttonsmith                                                     |
 |-----------------------------------|-----------------------------------------------------------------|
 | Click / double click / hold       | `click`, `double_click`, `hold` per button                      |
 | Click and drag (Spaces, Mission Control) | `drag = { left = "desktop-left", up = "overview", … }`   |
@@ -24,6 +27,11 @@ presets are KDE-specific.
 
 ## Install
 
+Previously installed as `mousefix`? `install.sh` migrates it: it moves
+your config, replaces the service, udev rule and menu entry, and removes
+the old command. Plasma treats the renamed virtual pointer as a new mouse,
+so set its pointer speed again (see below).
+
 You need Go 1.26 or newer.
 
 ```sh
@@ -32,22 +40,22 @@ You need Go 1.26 or newer.
 
 This script:
 
-1. Builds `~/.local/bin/mousefix`.
-2. Writes a default config to `~/.config/mousefix/config.toml`.
-3. Installs `/etc/udev/rules.d/70-mousefix.rules` (asks for sudo). The rule
+1. Builds `~/.local/bin/buttonsmith`.
+2. Writes a default config to `~/.config/buttonsmith/config.toml`.
+3. Installs `/etc/udev/rules.d/70-buttonsmith.rules` (asks for sudo). The rule
    gives the logged-in user access to this mouse and `/dev/uinput`. It does
    not add you to the `input` group, which would expose every keyboard.
-4. Enables the `mousefix` systemd user service.
-5. Adds **mousefix** to the application menu. It opens the settings window.
+4. Enables the `buttonsmith` systemd user service.
+5. Adds **Buttonsmith** to the application menu, with its icon. It opens the settings window.
 
-Logs: `journalctl --user -u mousefix -f`
+Logs: `journalctl --user -u buttonsmith -f`
 
-> **Pointer settings:** Plasma sees the virtual "mousefix pointer" as a new
+> **Pointer settings:** Plasma sees the virtual "Buttonsmith pointer" as a new
 > mouse. Set its pointer speed and acceleration in System Settings → Mouse.
 
 ## Settings window
 
-Open **mousefix** from the application menu, or run `mousefix ui`.
+Open **Buttonsmith** from the application menu, or run `buttonsmith ui`.
 
 - **Buttons:** click **+ Add button (press it)** and press the button on
   your mouse. Then choose what click, double click, hold, hold + move and
@@ -57,26 +65,27 @@ Open **mousefix** from the application menu, or run `mousefix ui`.
 - **Scrolling:** smooth scrolling, speed, acceleration, glide length,
   direction.
 - **Timing:** hold delay, double-click speed, drag sensitivity.
-- **Device:** pick which mouse mousefix takes over.
+- **Device:** pick which mouse to take over.
 - The header shows whether the service is running and whether the mouse is
   connected and readable, with Start/Stop and Restart buttons.
 
-**Save** writes `~/.config/mousefix/config.toml`, and the running service
+**Save** writes `~/.config/buttonsmith/config.toml`, and the running service
 picks it up within a second. If the file was hand-written, the first save
 keeps the original as `config.toml.bak` (the UI rewrites the file without
 comments). While the "Add button" dialog is open, the service is paused so
 the dialog can see your button presses.
 
-The window is a local web page. It opens as an app window in
-Chrome/Chromium, otherwise in your default browser. The server listens
-only on 127.0.0.1, requires a random per-session token, and exits about 10
-seconds after the window closes.
+The window is a native Qt window (PyQt6 + Qt WebEngine, which Fedora KDE
+ships) showing a local settings page. Without PyQt6 it opens as a
+Chrome/Chromium app window, or else in your default browser. The server
+listens only on 127.0.0.1, requires a random per-session token, and exits
+when the window closes.
 
 ## Config file
 
 Everything in the window can also be set in the TOML file directly.
-`mousefix example-config` prints a fully commented example and
-`mousefix check` validates your file.
+`buttonsmith example-config` prints a fully commented example and
+`buttonsmith check` validates your file.
 
 ```toml
 [buttons.back]
@@ -98,17 +107,17 @@ Actions: `none`, `key:ctrl+shift+t`, `button:middle`, `cmd:spectacle -r`,
 
 Some trackballs send keyboard keys from their extra buttons, for example
 `KEY_F13`. Those can be remapped too, e.g. `[buttons.KEY_F13]`. Both the
-"Add button" dialog and `mousefix detect` show what each button sends.
+"Add button" dialog and `buttonsmith detect` show what each button sends.
 
 ## Commands
 
 ```
-mousefix ui [-no-open]             open the settings window
-mousefix run [-config PATH] [-v]   run the remapper (-v logs every trigger)
-mousefix detect [-all]             show what each button sends
-mousefix list                      list input devices and whether they're readable
-mousefix check [-config PATH]      validate the config
-mousefix example-config            print the commented example config
+buttonsmith ui [-no-open]             open the settings window
+buttonsmith run [-config PATH] [-v]   run the remapper (-v logs every trigger)
+buttonsmith detect [-all]             show what each button sends
+buttonsmith list                      list input devices and whether they're readable
+buttonsmith check [-config PATH]      validate the config
+buttonsmith example-config            print the commented example config
 ```
 
 ## Notes and limitations
@@ -129,8 +138,8 @@ go test ./...
 go generate ./internal/evdev   # regenerate key names from linux/input-event-codes.h
 ```
 
-Layout: `internal/evdev` (cgo-free evdev/uinput), `internal/action`
+Layout: `internal/app` (names), `internal/evdev` (cgo-free evdev/uinput), `internal/action`
 (action syntax), `internal/config` (TOML and the UI's editable model),
 `internal/engine` (button state machine and scroll smoothing; pure logic,
-unit-tested), `internal/ui` (settings server plus a single-file
-`index.html`), `cmd/mousefix` (daemon loop and CLI).
+unit-tested), `internal/ui` (settings server, a single-file
+`index.html` and the PyQt6 `window.py`), `cmd/buttonsmith` (daemon loop and CLI).

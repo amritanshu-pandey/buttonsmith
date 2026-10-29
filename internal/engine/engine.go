@@ -10,9 +10,10 @@ import (
 	"os"
 	"time"
 
-	"linux-mouse-tools/internal/action"
-	"linux-mouse-tools/internal/config"
-	"linux-mouse-tools/internal/evdev"
+	"github.com/amritanshu-pandey/buttonsmith/internal/action"
+	"github.com/amritanshu-pandey/buttonsmith/internal/app"
+	"github.com/amritanshu-pandey/buttonsmith/internal/config"
+	"github.com/amritanshu-pandey/buttonsmith/internal/evdev"
 )
 
 // FrameInterval is how often smooth-scroll animation emits events.
@@ -123,7 +124,7 @@ func (e *Engine) cancelTriggers() {
 
 func (e *Engine) logf(format string, args ...any) {
 	if e.Verbose {
-		fmt.Fprintf(os.Stderr, "mousefix: "+format+"\n", args...)
+		fmt.Fprintf(os.Stderr, app.ID+": "+format+"\n", args...)
 	}
 }
 

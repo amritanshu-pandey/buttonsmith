@@ -1,8 +1,8 @@
-# mousefix configuration  (~/.config/mousefix/config.toml)
+# Buttonsmith configuration  (~/.config/buttonsmith/config.toml)
 # Changes are picked up automatically; no restart needed.
 
 # ---------------------------------------------------------------------------
-# Which mouse to take over. Find values with `mousefix list`.
+# Which mouse to take over. Find values with `buttonsmith list`.
 # All given fields must match. The default is the ProtoArc trackball's
 # "Compx 2.4G Receiver".
 [device]
@@ -31,7 +31,7 @@ drag_scroll_speed = 4   # for drag = "scroll"; negative inverts
 #
 # Table names: left, right, middle, back (BTN_SIDE), forward (BTN_EXTRA),
 # task, or any evdev name such as BTN_TASK or KEY_F13. Use
-# `mousefix detect` to see what each button on your mouse sends.
+# `buttonsmith detect` to see what each button on your mouse sends.
 #
 # Triggers (all optional):
 #   click        = action on a normal click. If unset, the button keeps its

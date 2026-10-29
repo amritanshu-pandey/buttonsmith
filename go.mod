@@ -1,4 +1,4 @@
-module linux-mouse-tools
+module github.com/amritanshu-pandey/buttonsmith
 
 go 1.26.0
 

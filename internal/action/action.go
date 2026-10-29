@@ -8,7 +8,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"linux-mouse-tools/internal/evdev"
+	"github.com/amritanshu-pandey/buttonsmith/internal/app"
+	"github.com/amritanshu-pandey/buttonsmith/internal/evdev"
 )
 
 type Kind int
@@ -238,7 +239,7 @@ func Spawn(a Action) {
 	}
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
-		fmt.Fprintf(os.Stderr, "mousefix: failed to run %v: %v\n", a, err)
+		fmt.Fprintf(os.Stderr, app.ID+": failed to run %v: %v\n", a, err)
 		return
 	}
 	go cmd.Wait() // reap

@@ -9,12 +9,12 @@ import (
 	"strings"
 	"testing"
 
-	"linux-mouse-tools/internal/config"
+	"github.com/amritanshu-pandey/buttonsmith/internal/config"
 )
 
 func newTestServer(t *testing.T) (*Server, http.Handler) {
 	t.Helper()
-	s := &Server{cfgPath: filepath.Join(t.TempDir(), "mousefix", "config.toml"), token: "secret", host: "127.0.0.1:1234"}
+	s := &Server{cfgPath: filepath.Join(t.TempDir(), "app", "config.toml"), token: "secret", host: "127.0.0.1:1234"}
 	return s, s.Handler()
 }
 

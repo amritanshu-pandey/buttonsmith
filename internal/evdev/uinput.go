@@ -8,9 +8,9 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// VirtualPrefix starts the name of every device mousefix creates, so it
-// never tries to grab its own output.
-const VirtualPrefix = "mousefix "
+// VirtualPrefix starts the name of every device we create, so we never
+// try to grab our own output.
+const VirtualPrefix = "Buttonsmith "
 
 // Virtual is a uinput device that events are written to.
 type Virtual struct {
