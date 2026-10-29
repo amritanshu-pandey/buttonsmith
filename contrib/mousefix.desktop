@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=mousefix
+GenericName=Mouse Settings
+Comment=Remap mouse buttons and configure smooth scrolling
+Exec=@BIN@ ui
+Icon=input-mouse
+Terminal=false
+Categories=Settings;HardwareSettings;
+Keywords=mouse;trackball;buttons;scroll;remap;

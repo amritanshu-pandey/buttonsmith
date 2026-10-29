@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mousefix</title>
+<style>
+:root {
+  --bg: #eff0f1; --panel: #fcfcfc; --text: #232629; --muted: #6e7175; --line: #d1d3d5;
+  --accent: #3daee9; --accent-text: #fff; --ok: #27ae60; --warn: #f67400; --bad: #da4453;
+  --field: #fff; --hover: #e3f2fa; --shadow: 0 1px 3px rgba(0,0,0,.08);
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1b1e20; --panel: #232629; --text: #eff0f1; --muted: #a1a9b1; --line: #3a3f44;
+    --field: #1d2023; --hover: #2a3a45; --shadow: 0 1px 3px rgba(0,0,0,.4);
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { font: 14px/1.45 "Noto Sans", system-ui, sans-serif; background: var(--bg); color: var(--text);
+       display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: minmax(0, 1fr); }
+
+header { display: flex; align-items: center; gap: 16px; padding: 10px 18px; background: var(--panel);
+         border-bottom: 1px solid var(--line); }
+.brand { font-weight: 600; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+.brand svg { width: 20px; height: 20px; }
+.status { display: flex; flex-direction: column; font-size: 13px; margin-left: 8px; }
+.status .line { display: flex; align-items: center; gap: 6px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+.dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
+header .spacer { flex: 1; }
+
+.layout { display: grid; grid-template-columns: 180px minmax(0, 1fr); min-height: 0; }
+nav { padding: 12px 8px; border-right: 1px solid var(--line); background: var(--panel); }
+nav a { display: block; padding: 8px 12px; border-radius: 6px; cursor: pointer; color: var(--text); user-select: none; }
+nav a:hover { background: var(--hover); }
+nav a.active { background: var(--accent); color: var(--accent-text); }
+main { overflow: auto; padding: 20px 24px 40px; min-width: 0; }
+main h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+main .lead { color: var(--muted); margin: 0 0 18px; max-width: 760px; }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow);
+        margin-bottom: 14px; max-width: 900px; }
+.card-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.card-head h2 { font-size: 15px; margin: 0; font-weight: 600; }
+.card-head .code { color: var(--muted); font: 12px ui-monospace, monospace; }
+.card-head .spacer { flex: 1; }
+.card-body { padding: 6px 14px 10px; }
+
+.row { display: grid; grid-template-columns: 170px 1fr; gap: 12px; align-items: start; padding: 7px 0; }
+.row + .row { border-top: 1px dashed var(--line); }
+.row > label { padding-top: 6px; }
+.row > label small { display: block; color: var(--muted); font-size: 12px; line-height: 1.3; }
+.sub { display: grid; grid-template-columns: 70px 1fr; gap: 6px 10px; align-items: center; margin-top: 8px;
+       padding: 8px 10px; border-left: 3px solid var(--line); }
+.sub > span { color: var(--muted); }
+
+.action { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+select, input[type=text], input[type=number] {
+  font: inherit; color: var(--text); background: var(--field); border: 1px solid var(--line); border-radius: 5px;
+  padding: 5px 8px; min-height: 32px; }
+select:focus, input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+input[type=text] { min-width: 240px; }
+input.mono { font-family: ui-monospace, monospace; }
+button { font: inherit; color: var(--text); background: var(--field); border: 1px solid var(--line); border-radius: 5px;
+         padding: 5px 12px; min-height: 32px; cursor: pointer; }
+button:hover:not(:disabled) { background: var(--hover); border-color: var(--accent); }
+button:disabled { opacity: .5; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+button.primary:hover:not(:disabled) { filter: brightness(1.08); background: var(--accent); }
+button.danger:hover { border-color: var(--bad); color: var(--bad); background: transparent; }
+button.small { padding: 2px 10px; min-height: 26px; font-size: 13px; }
+button.recording { border-color: var(--warn); color: var(--warn); }
+
+.setting { display: grid; grid-template-columns: 220px 1fr 70px; gap: 12px; align-items: center; padding: 10px 0; }
+.setting + .setting { border-top: 1px dashed var(--line); }
+.setting small { display: block; color: var(--muted); font-size: 12px; }
+.setting output { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
+
+table { border-collapse: collapse; width: 100%; }
+td, th { text-align: left; padding: 7px 10px; border-top: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 500; border-top: none; }
+tr.current td { background: var(--hover); }
+.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 10px; border: 1px solid var(--line); color: var(--muted); }
+.tag.ok { color: var(--ok); border-color: var(--ok); } .tag.bad { color: var(--bad); border-color: var(--bad); }
+
+.add-bar { display: flex; gap: 8px; align-items: center; max-width: 900px; flex-wrap: wrap; }
+.empty { color: var(--muted); padding: 30px; text-align: center; border: 2px dashed var(--line); border-radius: 8px; max-width: 900px; margin-bottom: 14px; }
+.banner { max-width: 900px; padding: 10px 14px; border-radius: 6px; margin-bottom: 14px; border: 1px solid var(--warn);
+          background: color-mix(in srgb, var(--warn) 12%, transparent); }
+.banner.bad { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
+code { font: 12.5px ui-monospace, monospace; background: color-mix(in srgb, var(--muted) 15%, transparent); padding: 1px 5px; border-radius: 4px; }
+
+footer { display: flex; align-items: center; gap: 10px; padding: 10px 18px; background: var(--panel); border-top: 1px solid var(--line); }
+footer .msg { flex: 1; min-width: 0; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+footer .msg.err { color: var(--bad); white-space: normal; }
+footer .msg.ok { color: var(--ok); }
+
+dialog { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text);
+         padding: 0; width: min(560px, 92vw); box-shadow: 0 10px 40px rgba(0,0,0,.35); }
+dialog::backdrop { background: rgba(0,0,0,.4); }
+dialog .dh { padding: 14px 18px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: 15px; }
+dialog .db { padding: 14px 18px; }
+dialog .df { padding: 10px 18px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 8px; }
+.presses { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; max-height: 260px; overflow: auto; }
+.press { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; }
+.press b { min-width: 120px; }
+.press .spacer { flex: 1; }
+.pulse { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); animation: pulse 1.2s infinite; margin-right: 6px; }
+@keyframes pulse { 0%,100% { opacity: .25 } 50% { opacity: 1 } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="2" width="14" height="20" rx="7"/><path d="M12 2v7M5 9h14"/></svg>
+    mousefix
+  </div>
+  <div class="status">
+    <div class="line"><span class="dot" id="svc-dot"></span><span id="svc-text">Checking service…</span></div>
+    <div class="line"><span class="dot" id="dev-dot"></span><span id="dev-text">Checking device…</span></div>
+  </div>
+  <div class="spacer"></div>
+  <button id="svc-toggle" disabled>Start</button>
+  <button id="svc-restart" disabled title="Restart the background service">Restart</button>
+</header>
+
+<div class="layout">
+  <nav>
+    <a data-page="buttons" class="active">Buttons</a>
+    <a data-page="scrolling">Scrolling</a>
+    <a data-page="timing">Timing</a>
+    <a data-page="device">Device</a>
+  </nav>
+  <main id="page"></main>
+</div>
+
+<footer>
+  <span class="msg" id="msg">Config: __CONFIG_PATH__</span>
+  <button id="revert" disabled>Revert</button>
+  <button id="save" class="primary" disabled>Save</button>
+</footer>
+
+<dialog id="detect">
+  <div class="dh">Add a button</div>
+  <div class="db">
+    <div id="detect-status"><span class="pulse"></span>Connecting…</div>
+    <div class="presses" id="detect-presses"></div>
+  </div>
+  <div class="df"><button id="detect-close">Close</button></div>
+</dialog>
+
+<script>
+"use strict";
+const TOKEN = "__TOKEN__";
+
+// ---------------------------------------------------------------- helpers
+function el(tag, attrs = {}, ...children) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (k === "class") e.className = v;
+    else if (v === true) e.setAttribute(k, "");
+    else e.setAttribute(k, v);
+  }
+  for (const c of children.flat()) if (c != null) e.append(c.nodeType ? c : String(c));
+  return e;
+}
+const $ = (id) => document.getElementById(id);
+const clone = (x) => JSON.parse(JSON.stringify(x));
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { ...opts, headers: { "X-Token": TOKEN, "Content-Type": "application/json" } });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+
+function setMsg(text, kind = "") {
+  const m = $("msg");
+  m.textContent = text;
+  m.className = "msg " + kind;
+}
+
+// ---------------------------------------------------------------- state
+let model = null;      // edited config
+let saved = null;      // last saved config (JSON string)
+let meta = { presets: [], kwin_shortcuts: [], devices: [] };
+let page = "buttons";
+const pageFromHash = () => { const h = location.hash.slice(1); if (h && h in PAGES) page = h; };
+let lastStatus = null;
+
+const dirty = () => model && JSON.stringify(model) !== saved;
+function changed() {
+  $("save").disabled = !dirty();
+  $("revert").disabled = !dirty();
+  if (dirty()) setMsg("Unsaved changes");
+}
+
+const BUTTON_LABELS = {
+  left: "Left button", right: "Right button", middle: "Middle button (wheel click)",
+  back: "Back button", forward: "Forward button", task: "Task button",
+};
+const labelFor = (name) => BUTTON_LABELS[name] || name;
+const EVDEV_FOR = { left: "BTN_LEFT", right: "BTN_RIGHT", middle: "BTN_MIDDLE", back: "BTN_SIDE", forward: "BTN_EXTRA", task: "BTN_TASK" };
+
+// ---------------------------------------------------------------- actions
+// An action string is "", "none", "key:…", "button:…", "kwin:…", "cmd:…" or
+// a preset name. The picker splits it into a kind plus an argument.
+const MOUSE_BUTTONS = [["left", "Left"], ["right", "Right"], ["middle", "Middle"], ["back", "Back"], ["forward", "Forward"]];
+
+function parseAction(s) {
+  s = (s || "").trim();
+  if (!s) return { kind: "" };
+  if (s === "none") return { kind: "none" };
+  const i = s.indexOf(":");
+  if (i > 0) {
+    const kind = s.slice(0, i).trim(), arg = s.slice(i + 1).trim();
+    const k = { keys: "key", command: "cmd", exec: "cmd" }[kind] || kind;
+    if (["key", "button", "kwin", "cmd"].includes(k)) return { kind: k, arg };
+  }
+  if (meta.presets.some((p) => p.name === s)) return { kind: "preset", arg: s };
+  return { kind: "custom", arg: s };
+}
+
+function formatAction(kind, arg) {
+  switch (kind) {
+    case "": return "";
+    case "none": return "none";
+    case "preset": case "custom": return arg || "";
+    default: return kind + ":" + (arg || "");
+  }
+}
+
+// Map KeyboardEvent.code to the config's key names.
+function keyName(code) {
+  let m;
+  if ((m = code.match(/^Key([A-Z])$/))) return m[1].toLowerCase();
+  if ((m = code.match(/^Digit(\d)$/))) return m[1];
+  if ((m = code.match(/^F(\d+)$/))) return "f" + m[1];
+  if ((m = code.match(/^Numpad(\d)$/))) return "kp" + m[1];
+  if ((m = code.match(/^Arrow(\w+)$/))) return m[1].toLowerCase();
+  const map = {
+    ControlLeft: "ctrl", ControlRight: "rightctrl", ShiftLeft: "shift", ShiftRight: "rightshift",
+    AltLeft: "alt", AltRight: "altgr", MetaLeft: "meta", MetaRight: "rightmeta", OSLeft: "meta", OSRight: "rightmeta",
+    Enter: "enter", Escape: "esc", Tab: "tab", Space: "space", Backspace: "backspace", Delete: "delete",
+    Insert: "insert", Home: "home", End: "end", PageUp: "pageup", PageDown: "pagedown",
+    Minus: "minus", Equal: "equal", BracketLeft: "leftbrace", BracketRight: "rightbrace", Semicolon: "semicolon",
+    Quote: "apostrophe", Backquote: "grave", Backslash: "backslash", Comma: "comma", Period: "dot", Slash: "slash",
+    PrintScreen: "print", CapsLock: "capslock", ContextMenu: "compose", NumpadAdd: "kpplus",
+    NumpadSubtract: "kpminus", NumpadMultiply: "kpasterisk", NumpadDivide: "kpslash", NumpadEnter: "kpenter",
+    AudioVolumeUp: "volumeup", AudioVolumeDown: "volumedown", AudioVolumeMute: "mute",
+    MediaPlayPause: "playpause", MediaTrackNext: "nextsong", MediaTrackPrevious: "previoussong",
+  };
+  return map[code] || null;
+}
+const MODIFIER_CODES = ["ControlLeft", "ControlRight", "ShiftLeft", "ShiftRight", "AltLeft", "AltRight", "MetaLeft", "MetaRight", "OSLeft", "OSRight"];
+
+let stopRecording = null;
+function recordCombo(button, input, done) {
+  if (stopRecording) stopRecording();
+  const held = new Set();
+  button.textContent = "Press keys…";
+  button.classList.add("recording");
+  const finish = (combo) => {
+    window.removeEventListener("keydown", down, true);
+    window.removeEventListener("keyup", up, true);
+    button.textContent = "Record";
+    button.classList.remove("recording");
+    stopRecording = null;
+    if (combo) { input.value = combo; done(combo); }
+  };
+  const mods = () => ["ctrl", "shift", "alt", "meta", "rightctrl", "rightshift", "altgr", "rightmeta"].filter((m) => held.has(m));
+  const down = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (e.code === "Escape" && held.size === 0) return finish(null);
+    const name = keyName(e.code);
+    if (!name) return;
+    if (MODIFIER_CODES.includes(e.code)) { held.add(name); return; }
+    finish([...mods(), name].join("+"));
+  };
+  const up = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    // A lone modifier (e.g. just "meta") is recorded on release.
+    if (MODIFIER_CODES.includes(e.code) && held.size) finish(mods().join("+"));
+  };
+  window.addEventListener("keydown", down, true);
+  window.addEventListener("keyup", up, true);
+  stopRecording = () => finish(null);
+}
+
+let kwinListId = 0;
+function actionPicker(value, onChange, defaultLabel) {
+  let { kind, arg } = parseAction(value);
+  const wrap = el("div", { class: "action" });
+  const sel = el("select");
+  if (defaultLabel) sel.append(el("option", { value: "" }, defaultLabel));
+  sel.append(el("option", { value: "none" }, "Do nothing"));
+  const groups = {};
+  for (const p of meta.presets) {
+    if (!groups[p.group]) sel.append((groups[p.group] = el("optgroup", { label: p.group })));
+    groups[p.group].append(el("option", { value: "preset:" + p.name }, p.label));
+  }
+  sel.append(el("optgroup", { label: "Custom" },
+    el("option", { value: "key" }, "Keyboard shortcut…"),
+    el("option", { value: "button" }, "Mouse button…"),
+    el("option", { value: "kwin" }, "KDE shortcut…"),
+    el("option", { value: "cmd" }, "Run command…"),
+    kind === "custom" ? el("option", { value: "custom" }, "Other…") : null));
+  sel.value = kind === "preset" ? "preset:" + arg : kind;
+  if (!defaultLabel && kind === "") sel.value = "none";
+
+  const extra = el("span", { class: "action" });
+  const emit = () => onChange(formatAction(kind, arg));
+  const textInput = (placeholder, cls) => el("input", {
+    type: "text", class: cls, value: arg || "", placeholder,
+    oninput: (e) => { arg = e.target.value; emit(); },
+  });
+
+  function renderExtra() {
+    extra.replaceChildren();
+    if (kind === "key") {
+      const input = textInput("e.g. ctrl+shift+t", "mono");
+      const rec = el("button", { class: "small", type: "button", onclick: () => recordCombo(rec, input, (c) => { arg = c; emit(); }) }, "Record");
+      extra.append(input, rec);
+    } else if (kind === "button") {
+      const s = el("select", { onchange: (e) => { arg = e.target.value; emit(); } },
+        MOUSE_BUTTONS.map(([v, l]) => el("option", { value: v }, l)));
+      if (!arg) arg = "middle";
+      s.value = arg;
+      extra.append(s);
+    } else if (kind === "kwin") {
+      const id = "kwin-list-" + ++kwinListId;
+      const input = textInput("shortcut name, e.g. Overview");
+      input.setAttribute("list", id);
+      extra.append(input, el("datalist", { id }, meta.kwin_shortcuts.map((n) => el("option", { value: n }))));
+    } else if (kind === "cmd") {
+      extra.append(textInput("e.g. spectacle -r", "mono"));
+    } else if (kind === "custom") {
+      extra.append(textInput("action", "mono"));
+    }
+  }
+
+  sel.addEventListener("change", () => {
+    const v = sel.value;
+    if (v.startsWith("preset:")) { kind = "preset"; arg = v.slice(7); }
+    else { kind = v; arg = ""; }
+    renderExtra();
+    emit();
+  });
+  renderExtra();
+  wrap.append(sel, extra);
+  return wrap;
+}
+
+// ---------------------------------------------------------------- pages
+function render() {
+  if (stopRecording) stopRecording();
+  for (const a of document.querySelectorAll("nav a")) a.classList.toggle("active", a.dataset.page === page);
+  const main = $("page");
+  main.replaceChildren(...(PAGES[page]() || []));
+}
+
+function row(label, hint, control) {
+  return el("div", { class: "row" }, el("label", {}, label, hint ? el("small", {}, hint) : null), el("div", {}, control));
+}
+
+function buttonCard(b, index) {
+  const set = (field) => (v) => { b[field] = v; changed(); };
+
+  // Drag: unset / scroll / directions
+  const dragBox = el("div");
+  const dragSel = el("select", {},
+    el("option", { value: "" }, "Nothing (pointer moves normally)"),
+    el("option", { value: "scroll" }, "Scroll in any direction"),
+    el("option", { value: "directions" }, "Trigger actions by direction"));
+  dragSel.value = b.drag ? b.drag.mode : "";
+  const renderDrag = () => {
+    dragBox.replaceChildren(dragSel);
+    if (b.drag && b.drag.mode === "directions") {
+      const sub = el("div", { class: "sub" });
+      for (const [d, l] of [["left", "Left"], ["right", "Right"], ["up", "Up"], ["down", "Down"]])
+        sub.append(el("span", {}, l), actionPicker(b.drag[d] || "", (v) => { b.drag[d] = v; changed(); }, "Nothing"));
+      dragBox.append(sub);
+    }
+  };
+  dragSel.addEventListener("change", () => {
+    const v = dragSel.value;
+    b.drag = !v ? null : v === "scroll" ? { mode: "scroll" }
+      : { mode: "directions", left: "desktop-left", right: "desktop-right", up: "overview", down: "show-desktop" };
+    renderDrag(); changed();
+  });
+  renderDrag();
+
+  // Wheel while held
+  const wheelBox = el("div");
+  const wheelSel = el("select", {},
+    el("option", { value: "" }, "Nothing (normal scrolling)"),
+    el("option", { value: "horizontal" }, "Scroll horizontally"),
+    el("option", { value: "zoom" }, "Zoom (Ctrl + wheel)"),
+    el("option", { value: "precise" }, "Precise (slow) scrolling"),
+    el("option", { value: "fast" }, "Fast scrolling"),
+    el("option", { value: "actions" }, "Trigger actions…"));
+  wheelSel.value = b.scroll ? b.scroll.mode : "";
+  const renderWheel = () => {
+    wheelBox.replaceChildren(wheelSel);
+    if (b.scroll && b.scroll.mode === "actions") {
+      const sub = el("div", { class: "sub" });
+      for (const [d, l] of [["up", "Wheel up"], ["down", "Wheel down"]])
+        sub.append(el("span", {}, l), actionPicker(b.scroll[d] || "", (v) => { b.scroll[d] = v; changed(); }, "Nothing"));
+      wheelBox.append(sub);
+    }
+  };
+  wheelSel.addEventListener("change", () => {
+    const v = wheelSel.value;
+    b.scroll = !v ? null : v === "actions" ? { mode: "actions", up: "volume-up", down: "volume-down" } : { mode: v };
+    renderWheel(); changed();
+  });
+  renderWheel();
+
+  const simple = !b.double_click && !b.hold && !b.drag && !b.scroll;
+  return el("div", { class: "card" },
+    el("div", { class: "card-head" },
+      el("h2", {}, labelFor(b.name)),
+      el("span", { class: "code" }, EVDEV_FOR[b.name] || ""),
+      el("span", { class: "spacer" }),
+      el("button", { class: "small danger", type: "button", title: "Restore this button's normal behaviour",
+        onclick: () => { model.buttons.splice(index, 1); changed(); render(); } }, "Remove")),
+    el("div", { class: "card-body" },
+      row("Click", simple ? "Runs on press, no delay" : "Runs on release",
+        actionPicker(b.click, set("click"), "Normal function")),
+      row("Double click", b.double_click ? "Single clicks wait briefly" : null,
+        actionPicker(b.double_click, (v) => { b.double_click = v; changed(); }, "Not used")),
+      row("Hold", "Press and keep still", actionPicker(b.hold, set("hold"), "Not used")),
+      row("Hold + move", "Click and drag", dragBox),
+      row("Hold + wheel", null, wheelBox)));
+}
+
+const PAGES = {
+  buttons() {
+    const out = [
+      el("h1", {}, "Buttons"),
+      el("p", { class: "lead" }, "Give each button extra functions: click, double click, hold, drag the ball while holding it, or turn the wheel while holding it. Buttons not listed here keep their normal function."),
+    ];
+    statusBanner(out);
+    if (!model.buttons.length) out.push(el("div", { class: "empty" }, "No buttons remapped yet."));
+    model.buttons.forEach((b, i) => out.push(buttonCard(b, i)));
+
+    const used = new Set(model.buttons.map((b) => b.name));
+    const manual = el("select", { onchange: (e) => {
+      if (e.target.value) addButton(e.target.value);
+    } }, el("option", { value: "" }, "Add by name…"),
+      ["middle", "back", "forward", "task", "right"].filter((n) => !used.has(n)).map((n) => el("option", { value: n }, labelFor(n))));
+    out.push(el("div", { class: "add-bar" },
+      el("button", { class: "primary", type: "button", onclick: openDetect }, "+ Add button (press it)"),
+      manual));
+    return out;
+  },
+
+  scrolling() {
+    const s = model.scroll;
+    return [
+      el("h1", {}, "Scrolling"),
+      el("p", { class: "lead" }, "Smooth scrolling turns each wheel click into a short animation of small, high-resolution scroll steps."),
+      el("div", { class: "card" }, el("div", { class: "card-body" },
+        toggle("Smooth scrolling", "Animate each wheel click", s, "smooth"),
+        slider("Speed", "Distance per wheel click", s, "speed", 0.25, 4, 0.05, (v) => v.toFixed(2) + "×"),
+        toggle("Acceleration", "Spin the wheel quickly to scroll further", s, "acceleration"),
+        slider("Smoothness", "Length of the glide (0 = off)", s, "smoothness_ms", 0, 150, 5, (v) => v + " ms"),
+        toggle("Reverse direction", "Natural scrolling", s, "reverse"))),
+    ];
+  },
+
+  timing() {
+    const t = model.timing;
+    return [
+      el("h1", {}, "Timing"),
+      el("p", { class: "lead" }, "Fine-tune how presses are recognised."),
+      el("div", { class: "card" }, el("div", { class: "card-body" },
+        slider("Hold delay", "Press this long for Hold", t, "hold_ms", 100, 1000, 10, (v) => v + " ms"),
+        slider("Double-click speed", "Max gap between clicks", t, "double_click_ms", 100, 600, 10, (v) => v + " ms"),
+        slider("Drag threshold", "Movement before a press becomes a drag", t, "drag_threshold", 2, 40, 1, (v) => v + " px"),
+        slider("Drag step", "Movement per directional drag action", t, "drag_step", 20, 300, 5, (v) => v + " px"),
+        slider("Drag-scroll speed", "Hold + move scrolling; negative inverts", t, "drag_scroll_speed", -20, 20, 0.5, (v) => v.toFixed(1)))),
+    ];
+  },
+
+  device() {
+    const d = model.device;
+    const matches = (dev) => (!d.vendor || dev.vendor === d.vendor.toLowerCase().replace(/^0x/, "")) &&
+      (!d.product || dev.product === d.product.toLowerCase().replace(/^0x/, "")) &&
+      (!d.name || dev.names.some((n) => n.toLowerCase().includes(d.name.toLowerCase())));
+    const mice = meta.devices.filter((x) => x.mouse);
+    const field = (key, ph) => el("input", { type: "text", class: "mono", value: d[key] || "", placeholder: ph,
+      oninput: (e) => { d[key] = e.target.value.trim(); changed(); } });
+    const out = [
+      el("h1", {}, "Device"),
+      el("p", { class: "lead" }, "mousefix takes over one mouse; all other input devices are left alone. Changing the device needs a matching udev rule for read access (see README)."),
+    ];
+    statusBanner(out);
+    out.push(el("div", { class: "card" },
+      el("div", { class: "card-head" }, el("h2", {}, "Connected mice")),
+      el("div", { class: "card-body" }, mice.length ? el("table", {},
+        el("tr", {}, el("th", {}, "ID"), el("th", {}, "Name"), el("th", {}, "Access"), el("th")),
+        mice.map((m) => el("tr", { class: matches(m) ? "current" : "" },
+          el("td", {}, el("code", {}, m.vendor + ":" + m.product)),
+          el("td", {}, m.names.join(", ")),
+          el("td", {}, el("span", { class: "tag " + (m.readable ? "ok" : "bad") }, m.readable ? "readable" : "no permission")),
+          el("td", {}, matches(m) ? el("span", { class: "tag ok" }, "selected")
+            : el("button", { class: "small", type: "button", onclick: () => {
+                Object.assign(d, { vendor: m.vendor, product: m.product, name: "" }); changed(); render();
+              } }, "Use this"))))) : el("p", {}, "No mice found."))),
+      el("div", { class: "card" },
+        el("div", { class: "card-head" }, el("h2", {}, "Match rule")),
+        el("div", { class: "card-body" },
+          row("Vendor ID", "hex, e.g. 25a7", field("vendor", "any")),
+          row("Product ID", "hex, e.g. fa61", field("product", "any")),
+          row("Name contains", "optional", field("name", "any")))));
+    return out;
+  },
+};
+
+function toggle(label, hint, obj, key) {
+  return el("div", { class: "setting" },
+    el("div", {}, label, el("small", {}, hint)),
+    el("div", {}, el("input", { type: "checkbox", checked: !!obj[key], onchange: (e) => { obj[key] = e.target.checked; changed(); } })),
+    el("output"));
+}
+
+function slider(label, hint, obj, key, min, max, step, fmt) {
+  const out = el("output", {}, fmt(obj[key]));
+  return el("div", { class: "setting" },
+    el("div", {}, label, el("small", {}, hint)),
+    el("input", { type: "range", min, max, step, value: obj[key],
+      oninput: (e) => { obj[key] = Number(e.target.value); out.textContent = fmt(obj[key]); changed(); } }),
+    out);
+}
+
+function statusBanner(out) {
+  const st = lastStatus;
+  if (!st) return;
+  if (!st.service.installed) {
+    out.push(el("div", { class: "banner" }, "The background service isn't installed, so changes won't take effect yet. Run ", el("code", {}, "./install.sh"), " from the project folder."));
+  } else if (st.device.present && !st.device.readable) {
+    out.push(el("div", { class: "banner bad" }, "No permission to read the mouse. Run ", el("code", {}, "./install.sh"), " to install the udev rule, then reconnect the receiver."));
+  }
+}
+
+function addButton(name) {
+  if (!model.buttons.some((b) => b.name === name)) {
+    model.buttons.push({ name, click: "", double_click: "", hold: "", drag: null, scroll: null });
+    changed();
+  }
+  page = "buttons";
+  render();
+}
+
+// ---------------------------------------------------------------- detection
+let detectSource = null;
+function openDetect() {
+  const dlg = $("detect"), status = $("detect-status"), list = $("detect-presses");
+  list.replaceChildren();
+  status.replaceChildren(el("span", { class: "pulse" }), "Connecting…");
+  const d = model.device;
+  const q = new URLSearchParams({ token: TOKEN, vendor: d.vendor || "", product: d.product || "", name: d.name || "" });
+  detectSource = new EventSource("/api/detect?" + q);
+  let paused = false;
+  detectSource.addEventListener("paused", () => { paused = true; });
+  detectSource.addEventListener("ready", () => {
+    status.replaceChildren(el("span", { class: "pulse" }),
+      "Press the button you want to set up." + (paused ? " (The background service is paused until you close this.)" : ""));
+  });
+  detectSource.addEventListener("press", (e) => {
+    const p = JSON.parse(e.data);
+    if (p.name === "left") return; // that's you clicking around in this window
+    const exists = model.buttons.some((b) => b.name === p.name);
+    list.prepend(el("div", { class: "press" },
+      el("b", {}, labelFor(p.name)), el("code", {}, p.evdev),
+      el("span", { class: "spacer" }),
+      exists ? el("span", { class: "tag" }, "already set up")
+        : el("button", { class: "small primary", type: "button", onclick: () => { closeDetect(); addButton(p.name); } }, "Set up")));
+  });
+  detectSource.addEventListener("fail", (e) => {
+    status.textContent = JSON.parse(e.data).error;
+    detectSource.close();
+  });
+  detectSource.onerror = () => {
+    if (detectSource.readyState === EventSource.CLOSED) return;
+    status.textContent = "Lost connection to mousefix.";
+    detectSource.close();
+  };
+  dlg.showModal();
+}
+function closeDetect() {
+  if (detectSource) detectSource.close();
+  detectSource = null;
+  $("detect").close();
+}
+$("detect-close").onclick = closeDetect;
+$("detect").addEventListener("cancel", closeDetect);
+
+// ---------------------------------------------------------------- status
+function showStatus(st) {
+  const first = !lastStatus;
+  const changedBanner = lastStatus && (lastStatus.service.installed !== st.service.installed || lastStatus.device.readable !== st.device.readable);
+  lastStatus = st;
+  const svc = st.service, dev = st.device;
+  const running = svc.active === "active";
+  $("svc-dot").className = "dot " + (!svc.installed ? "warn" : running ? "ok" : svc.active === "failed" ? "bad" : "");
+  $("svc-text").textContent = !svc.installed ? "Service not installed"
+    : running ? "Running" + (svc.enabled === "enabled" ? " · starts at login" : "")
+    : svc.active === "failed" ? "Service failed: see journalctl --user -u mousefix" : "Stopped";
+  $("dev-dot").className = "dot " + (!dev.present ? "warn" : dev.readable ? "ok" : "bad");
+  $("dev-text").textContent = !dev.configured ? "No device selected"
+    : !dev.present ? "Mouse not connected" : dev.readable ? dev.name : dev.name + ": no permission";
+  const toggleBtn = $("svc-toggle");
+  toggleBtn.disabled = !svc.installed;
+  toggleBtn.textContent = running ? "Stop" : "Start";
+  $("svc-restart").disabled = !svc.installed || !running;
+  if (first || changedBanner) render();
+}
+
+async function serviceOp(op) {
+  try { showStatus({ ...lastStatus, service: await api("/api/service/" + op, { method: "POST" }) }); }
+  catch (e) { setMsg(e.message, "err"); }
+}
+$("svc-toggle").onclick = () => serviceOp(lastStatus.service.active === "active" ? "stop" : (lastStatus.service.enabled === "enabled" ? "start" : "enable"));
+$("svc-restart").onclick = () => serviceOp("restart");
+
+// ---------------------------------------------------------------- save
+$("save").onclick = async () => {
+  try {
+    const r = await api("/api/config", { method: "PUT", body: JSON.stringify(model) });
+    saved = JSON.stringify(model);
+    changed();
+    setMsg("Saved. Changes apply within a second." + (r.backup ? " Your previous file was kept as " + r.backup : ""), "ok");
+  } catch (e) {
+    setMsg("Not saved: " + e.message, "err");
+  }
+};
+$("revert").onclick = () => { model = JSON.parse(saved); changed(); render(); setMsg("Reverted to the saved config"); };
+window.addEventListener("beforeunload", (e) => { if (dirty()) e.preventDefault(); });
+
+for (const a of document.querySelectorAll("nav a")) a.onclick = () => { page = a.dataset.page; history.replaceState(null, "", "#" + page); render(); };
+
+// ---------------------------------------------------------------- start
+(async function init() {
+  try {
+    const [cfg, m] = await Promise.all([api("/api/config"), api("/api/meta")]);
+    meta = m;
+    pageFromHash();
+    model = cfg.model;
+    saved = JSON.stringify(model);
+    if (cfg.error) setMsg("Your config file has an error, so defaults are shown (saving replaces it): " + cfg.error, "err");
+    else if (!cfg.exists) setMsg("No config file yet. Showing defaults; Save creates " + cfg.path);
+    render();
+  } catch (e) {
+    setMsg("Failed to load: " + e.message, "err");
+  }
+  const events = new EventSource("/api/events?token=" + TOKEN);
+  events.addEventListener("status", (e) => showStatus(JSON.parse(e.data)));
+})();
+</script>
+</body>
+</html>

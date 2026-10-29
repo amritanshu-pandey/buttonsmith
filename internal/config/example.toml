@@ -1,0 +1,83 @@
+# mousefix configuration  (~/.config/mousefix/config.toml)
+# Changes are picked up automatically; no restart needed.
+
+# ---------------------------------------------------------------------------
+# Which mouse to take over. Find values with `mousefix list`.
+# All given fields must match. The default is the ProtoArc trackball's
+# "Compx 2.4G Receiver".
+[device]
+vendor = "25a7"
+product = "fa61"
+# name = "Receiver Mouse"
+
+# ---------------------------------------------------------------------------
+[scroll]
+smooth = true          # turn wheel ticks into smooth, animated scrolling
+speed = 1.0            # distance per wheel tick (1.0 = normal)
+acceleration = true    # spin the wheel quickly to scroll further
+smoothness_ms = 45     # glide length; 0 disables the animation
+reverse = false        # invert scroll direction
+
+# ---------------------------------------------------------------------------
+[timing]
+hold_ms = 300           # press this long for `hold`
+double_click_ms = 250   # max gap between clicks for `double_click`
+drag_threshold = 8      # px of movement before a press becomes a drag
+drag_step = 80          # px of movement per directional drag action
+drag_scroll_speed = 4   # for drag = "scroll"; negative inverts
+
+# ---------------------------------------------------------------------------
+# Buttons
+#
+# Table names: left, right, middle, back (BTN_SIDE), forward (BTN_EXTRA),
+# task, or any evdev name such as BTN_TASK or KEY_F13. Use
+# `mousefix detect` to see what each button on your mouse sends.
+#
+# Triggers (all optional):
+#   click        = action on a normal click. If unset, the button keeps its
+#                  normal function.
+#   double_click = action on a double click
+#   hold         = action when held for hold_ms without moving
+#   drag         = while held, moving the ball:
+#                    "scroll"                        scroll/pan with the ball
+#                    { left=…, right=…, up=…, down=… } one action per drag_step
+#   scroll       = while held, the wheel does:
+#                    "horizontal" | "zoom" | "precise" | "fast"
+#                    { up = …, down = … }            one action per wheel tick
+#
+# Actions:
+#   "none"                     do nothing
+#   "key:ctrl+shift+t"         key combo (any evdev key: f13, volumeup, …)
+#   "button:middle"            mouse button: left right middle back forward
+#   "cmd:spectacle -r"         run a shell command
+#   "kwin:Overview"            any KWin shortcut by name. List them with:
+#        busctl --user call org.kde.kglobalaccel /component/kwin \
+#          org.kde.kglobalaccel.Component shortcutNames
+#   Presets:
+#     back forward left-click right-click middle-click
+#     volume-up volume-down mute play-pause next-track prev-track
+#     brightness-up brightness-down
+#     overview grid windows all-windows app-windows show-desktop
+#     desktop-left desktop-right desktop-up desktop-down desktop-next desktop-prev
+#
+# A button with only `click` acts on press with no delay, and key combos
+# stay pressed while the button is held. With other triggers, `click`
+# fires on release. With `double_click`, it waits double_click_ms first.
+
+# Middle button: click as usual. Hold and move the ball to switch desktops
+# or open the overview.
+[buttons.middle]
+drag = { left = "desktop-left", right = "desktop-right", up = "overview", down = "show-desktop" }
+
+# Back button: click = back. Hold and move the ball to scroll in any
+# direction (great on a trackball). Hold and use the wheel to scroll
+# sideways.
+[buttons.back]
+drag = "scroll"
+scroll = "horizontal"
+
+# Forward button: click = forward. Hold and use the wheel to zoom. Hold
+# still to show all windows.
+[buttons.forward]
+hold = "windows"
+scroll = "zoom"
