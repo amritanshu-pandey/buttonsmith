@@ -27,6 +27,30 @@ presets are KDE-specific.
 
 ## Install
 
+### From a package (Fedora, Debian, Ubuntu)
+
+Build the packages (needs Go 1.26 or newer; nfpm is fetched automatically):
+
+```sh
+make packages          # dist/*.rpm and dist/*.deb for amd64 and arm64
+make packages VERSION=0.2.0
+```
+
+Then install the one for your system:
+
+```sh
+sudo dnf install ./dist/buttonsmith-0.1.0-1.x86_64.rpm     # Fedora
+sudo apt install ./dist/buttonsmith_0.1.0_amd64.deb        # Debian, Ubuntu
+```
+
+The package installs the command, the udev rule, the settings window and
+the systemd user service, and enables the service for every user. Log out
+and back in (or open **Buttonsmith** and press **Start**). It recommends
+PyQt6 WebEngine for the native settings window and polkit for
+**Allow access**.
+
+### From source, for one user
+
 Previously installed as `mousefix`? `install.sh` migrates it: it moves
 your config, replaces the service, udev rule and menu entry, and removes
 the old command. Plasma treats the renamed virtual pointer as a new mouse,
@@ -43,12 +67,21 @@ This script:
 1. Builds `~/.local/bin/buttonsmith`.
 2. Writes a default config to `~/.config/buttonsmith/config.toml`.
 3. Installs `/etc/udev/rules.d/70-buttonsmith.rules` (asks for sudo). The rule
-   gives the logged-in user access to this mouse and `/dev/uinput`. It does
-   not add you to the `input` group, which would expose every keyboard.
+   gives the logged-in user access to the ProtoArc receiver and
+   `/dev/uinput`. It does not add you to the `input` group, which would
+   expose every keyboard.
 4. Enables the `buttonsmith` systemd user service.
 5. Adds **Buttonsmith** to the application menu, with its icon. It opens the settings window.
 
 Logs: `journalctl --user -u buttonsmith -f`
+
+### Using a different mouse
+
+Buttonsmith can only read mice it has permission for. On the **Device**
+page, press **Allow access** next to your mouse and enter the admin
+password. This writes `/etc/udev/rules.d/71-buttonsmith-device.rules` for
+that one mouse (replacing any earlier one); from a terminal, run
+`sudo buttonsmith allow-device VVVV:PPPP`. Then press **Use this**.
 
 > **Pointer settings:** Plasma sees the virtual "Buttonsmith pointer" as a new
 > mouse. Set its pointer speed and acceleration in System Settings → Mouse.
@@ -118,6 +151,8 @@ buttonsmith detect [-all]             show what each button sends
 buttonsmith list                      list input devices and whether they're readable
 buttonsmith check [-config PATH]      validate the config
 buttonsmith example-config            print the commented example config
+buttonsmith allow-device VVVV:PPPP    let the logged-in user read this mouse (as root)
+buttonsmith version                   print the version
 ```
 
 ## Notes and limitations
@@ -134,12 +169,22 @@ buttonsmith example-config            print the commented example config
 ## Development
 
 ```sh
-go test ./...
+make test                      # or: go test ./...
+make packages                  # .deb and .rpm in dist/ (see packaging/nfpm.yaml)
 go generate ./internal/evdev   # regenerate key names from linux/input-event-codes.h
 ```
 
 Layout: `internal/app` (names), `internal/evdev` (cgo-free evdev/uinput), `internal/action`
 (action syntax), `internal/config` (TOML and the UI's editable model),
-`internal/engine` (button state machine and scroll smoothing; pure logic,
+`internal/access` (per-mouse udev rule), `internal/engine` (button state machine and scroll smoothing; pure logic,
 unit-tested), `internal/ui` (settings server, a single-file
 `index.html` and the PyQt6 `window.py`), `cmd/buttonsmith` (daemon loop and CLI).
+
+## License
+
+Copyright (C) 2026 Amritanshu Pandey
+
+Buttonsmith is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
+any later version. See [LICENSE](LICENSE).

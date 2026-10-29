@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- Lets the settings window grant read access to one mouse (writes a udev rule). -->
+<policyconfig>
+  <vendor>Buttonsmith</vendor>
+  <vendor_url>https://github.com/amritanshu-pandey/buttonsmith</vendor_url>
+  <icon_name>io.github.amritanshu_pandey.Buttonsmith</icon_name>
+  <action id="io.github.amritanshu_pandey.Buttonsmith.allow-device">
+    <description>Allow Buttonsmith to use a mouse</description>
+    <message>Authentication is required to let Buttonsmith read this mouse</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/buttonsmith</annotate>
+    <annotate key="org.freedesktop.policykit.exec.argv1">allow-device</annotate>
+  </action>
+</policyconfig>

@@ -2,6 +2,7 @@
 # trackball's receiver (and only that device) plus /dev/uinput.
 # "uaccess" grants an ACL to the active seat user. The file must sort
 # before 73-seat-late.rules.
-# For another mouse, change the IDs (see `buttonsmith list`).
-SUBSYSTEM=="input", KERNEL=="event*", ATTRS{idVendor}=="25a7", ATTRS{idProduct}=="fa61", TAG+="uaccess"
+# Other mice get their own rule in 71-buttonsmith-device.rules, written
+# by "Allow access" in the settings window (`buttonsmith allow-device`).
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{id/vendor}=="25a7", ATTRS{id/product}=="fa61", TAG+="uaccess"
 KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"

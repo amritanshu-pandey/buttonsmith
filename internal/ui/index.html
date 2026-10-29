@@ -72,7 +72,7 @@ button:disabled { opacity: .5; cursor: default; }
 button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 button.primary:hover:not(:disabled) { filter: brightness(1.08); background: var(--accent); }
 button.danger:hover { border-color: var(--bad); color: var(--bad); background: transparent; }
-button.small { padding: 2px 10px; min-height: 26px; font-size: 13px; }
+button.small { padding: 2px 10px; min-height: 26px; font-size: 13px; white-space: nowrap; }
 button.recording { border-color: var(--warn); color: var(--warn); }
 
 .setting { display: grid; grid-template-columns: 220px 1fr 70px; gap: 12px; align-items: center; padding: 10px 0; }
@@ -504,7 +504,7 @@ const PAGES = {
       oninput: (e) => { d[key] = e.target.value.trim(); changed(); } });
     const out = [
       el("h1", {}, "Device"),
-      el("p", { class: "lead" }, "__APP_NAME__ takes over one mouse; all other input devices are left alone. Changing the device needs a matching udev rule for read access (see README)."),
+      el("p", { class: "lead" }, "__APP_NAME__ takes over one mouse; all other input devices are left alone. Reading a mouse needs permission: use Allow access to grant it (asks for the admin password once)."),
     ];
     statusBanner(out);
     out.push(el("div", { class: "card" },
@@ -514,7 +514,8 @@ const PAGES = {
         mice.map((m) => el("tr", { class: matches(m) ? "current" : "" },
           el("td", {}, el("code", {}, m.vendor + ":" + m.product)),
           el("td", {}, m.names.join(", ")),
-          el("td", {}, el("span", { class: "tag " + (m.readable ? "ok" : "bad") }, m.readable ? "readable" : "no permission")),
+          el("td", {}, m.readable ? el("span", { class: "tag ok" }, "readable")
+            : el("button", { class: "small", type: "button", onclick: (e) => allowDevice(m, e.target) }, "Allow access")),
           el("td", {}, matches(m) ? el("span", { class: "tag ok" }, "selected")
             : el("button", { class: "small", type: "button", onclick: () => {
                 Object.assign(d, { vendor: m.vendor, product: m.product, name: "" }); changed(); render();
@@ -557,10 +558,26 @@ function statusBanner(out) {
   const st = lastStatus;
   if (!st) return;
   if (!st.service.installed) {
-    out.push(el("div", { class: "banner" }, "The background service isn't installed, so changes won't take effect yet. Run ", el("code", {}, "./install.sh"), " from the project folder."));
+    out.push(el("div", { class: "banner" }, "The background service isn't installed, so changes won't take effect yet. Install the package, or run ", el("code", {}, "./install.sh"), " from the project folder."));
   } else if (st.device.present && !st.device.readable) {
-    out.push(el("div", { class: "banner bad" }, "No permission to read the mouse. Run ", el("code", {}, "./install.sh"), " to install the udev rule, then reconnect the receiver."));
+    const m = meta.devices.find((x) => x.mouse && deviceMatches(x));
+    out.push(el("div", { class: "banner bad" }, "No permission to read the mouse. ",
+      m ? el("button", { class: "small", type: "button", onclick: (e) => allowDevice(m, e.target) }, "Allow access") : "Allow access on the Device page."));
   }
+}
+
+// allowDevice installs a udev rule for the mouse; pkexec asks for the admin
+// password. The service picks the device up on its next scan.
+async function allowDevice(m, button) {
+  button.disabled = true;
+  button.textContent = "Waiting for password…";
+  try {
+    meta.devices = await api("/api/allow-device/" + m.vendor + ":" + m.product, { method: "POST" });
+    setMsg("Access granted to " + m.names[0] + ".", "ok");
+  } catch (e) {
+    setMsg("Could not allow access: " + e.message, "err");
+  }
+  render();
 }
 
 function addButton(name) {

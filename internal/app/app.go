@@ -12,3 +12,6 @@ const (
 	// first, so a dashed name could resolve to an unrelated theme icon.
 	AppID = "io.github.amritanshu_pandey.Buttonsmith"
 )
+
+// Version is set at build time: -ldflags "-X .../internal/app.Version=1.2.3".
+var Version = "dev"

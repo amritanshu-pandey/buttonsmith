@@ -16,6 +16,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"github.com/amritanshu-pandey/buttonsmith/internal/access"
 	"github.com/amritanshu-pandey/buttonsmith/internal/action"
 	"github.com/amritanshu-pandey/buttonsmith/internal/app"
 	"github.com/amritanshu-pandey/buttonsmith/internal/config"
@@ -31,8 +32,10 @@ Usage:
   CMD run [-config PATH] [-v]   run the remapper (usually via systemd)
   CMD detect [-all]             show which codes your mouse's buttons send
   CMD list                      list input devices
+  CMD allow-device VVVV:PPPP    let the logged-in user read this mouse (as root)
   CMD check [-config PATH]      validate the config file
   CMD example-config            print a commented example config
+  CMD version                   print the version
 
 Default config: $XDG_CONFIG_HOME/CMD/config.toml
 `, "CMD", app.ID)
@@ -60,6 +63,11 @@ func main() {
 		err = detect(*cfgPath, *all)
 	case "list":
 		list()
+	case "allow-device":
+		var v, p uint16
+		if v, p, err = access.ParseID(fs.Arg(0)); err == nil {
+			err = access.Install(v, p)
+		}
 	case "check":
 		var cfg *config.Config
 		if cfg, err = config.Load(*cfgPath); err == nil {
@@ -67,6 +75,8 @@ func main() {
 		}
 	case "example-config":
 		fmt.Print(config.Example)
+	case "version", "-version", "--version":
+		fmt.Println(app.ID, app.Version)
 	case "-h", "-help", "--help", "help":
 		fmt.Print(usage)
 	default:
@@ -151,7 +161,7 @@ func openSources(cfg *config.Config) ([]source, error) {
 	if !hasPointer {
 		closeSources(srcs)
 		if permErr != nil {
-			return nil, fmt.Errorf("%w (install the udev rule: see README)", permErr)
+			return nil, fmt.Errorf("%w (allow access on the Device page of the settings window)", permErr)
 		}
 		return nil, nil
 	}
@@ -360,7 +370,7 @@ func detect(cfgPath string, all bool) error {
 		fmt.Printf("watching %s  %04x:%04x  %s\n", dev.Path, dev.Vendor, dev.Product, dev.Name)
 	}
 	if len(denied) > 0 {
-		fmt.Printf("no permission for %s\n  → install the udev rule (see README) or run with sudo\n", strings.Join(denied, " "))
+		fmt.Printf("no permission for %s\n  → allow access on the Device page of the settings window, or run with sudo\n", strings.Join(denied, " "))
 	}
 	if len(devs) == 0 {
 		return fmt.Errorf("no matching devices to watch")

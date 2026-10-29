@@ -1,0 +1,57 @@
+# Package definition for nfpm (https://nfpm.goreleaser.com).
+# Build with `make packages`; it sets ARCH and VERSION and fills dist/.
+name: buttonsmith
+arch: ${ARCH}
+platform: linux
+version: ${VERSION}
+section: utils
+priority: optional
+maintainer: Amritanshu Pandey <5570314+amritanshu-pandey@users.noreply.github.com>
+license: GPL-3.0-or-later
+homepage: https://github.com/amritanshu-pandey/buttonsmith
+description: |
+  Mouse button remapping, gestures and smooth scrolling for Wayland
+  Made for KDE Plasma. Buttonsmith grabs one mouse through
+  evdev and re-emits its events through virtual uinput devices, so it works
+  with any compositor. Includes a settings window and a systemd user service.
+
+recommends:
+  - polkit # pkexec, for "Allow access" in the settings window
+overrides:
+  rpm:
+    recommends:
+      - polkit
+      - python3-pyqt6-webengine # native settings window
+  deb:
+    recommends:
+      - pkexec
+      - python3-pyqt6.qtwebengine # native settings window
+
+contents:
+  - src: dist/bin/buttonsmith # built for $ARCH just before packaging
+    dst: /usr/bin/buttonsmith
+    file_info: { mode: 0755 }
+  - src: contrib/70-buttonsmith.rules
+    dst: /usr/lib/udev/rules.d/70-buttonsmith.rules
+  - src: dist/buttonsmith.service
+    dst: /usr/lib/systemd/user/buttonsmith.service
+  - src: dist/io.github.amritanshu_pandey.Buttonsmith.desktop
+    dst: /usr/share/applications/io.github.amritanshu_pandey.Buttonsmith.desktop
+  - src: internal/ui/icon.svg
+    dst: /usr/share/icons/hicolor/scalable/apps/io.github.amritanshu_pandey.Buttonsmith.svg
+  - src: contrib/io.github.amritanshu_pandey.Buttonsmith.policy
+    dst: /usr/share/polkit-1/actions/io.github.amritanshu_pandey.Buttonsmith.policy
+  - src: README.md
+    dst: /usr/share/doc/buttonsmith/README.md
+  - src: LICENSE
+    dst: /usr/share/licenses/buttonsmith/LICENSE
+    packager: rpm
+    type: license
+  - src: packaging/copyright
+    dst: /usr/share/doc/buttonsmith/copyright
+    packager: deb
+
+scripts:
+  postinstall: packaging/postinstall.sh
+  preremove: packaging/preremove.sh
+  postremove: packaging/postremove.sh

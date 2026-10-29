@@ -24,6 +24,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"github.com/amritanshu-pandey/buttonsmith/internal/access"
 	"github.com/amritanshu-pandey/buttonsmith/internal/action"
 	"github.com/amritanshu-pandey/buttonsmith/internal/app"
 	"github.com/amritanshu-pandey/buttonsmith/internal/config"
@@ -172,6 +173,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/config", s.getConfig)
 	mux.HandleFunc("PUT /api/config", s.putConfig)
 	mux.HandleFunc("GET /api/meta", s.meta)
+	mux.HandleFunc("POST /api/allow-device/{id}", s.allowDevice)
 	mux.HandleFunc("GET /api/events", s.events)
 	mux.HandleFunc("POST /api/service/{op}", s.service)
 	mux.HandleFunc("GET /api/detect", s.detect)
@@ -507,6 +509,21 @@ func (s *Server) service(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, getServiceStatus())
 }
 
+// allowDevice grants read access to a mouse. pkexec shows the desktop's
+// password dialog, so this blocks until the user answers it.
+func (s *Server) allowDevice(w http.ResponseWriter, r *http.Request) {
+	vendor, product, err := access.ParseID(r.PathValue("id"))
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, err)
+		return
+	}
+	if err := access.Request(vendor, product); err != nil {
+		writeErr(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, devices())
+}
+
 // --- detection ------------------------------------------------------------
 
 type press struct {
@@ -553,7 +570,7 @@ func (s *Server) detect(w http.ResponseWriter, r *http.Request) {
 	if len(devs) == 0 {
 		msg := "the selected device is not connected"
 		if len(denied) > 0 {
-			msg = "no permission to read the device; run ./install.sh to install the udev rule"
+			msg = "no permission to read the device; allow access on the Device page"
 		}
 		sse.send("fail", map[string]string{"error": msg})
 		return

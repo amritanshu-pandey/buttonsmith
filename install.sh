@@ -44,7 +44,8 @@ if ! cmp -s "contrib/70-$id.rules" "$rule" || [[ -e /etc/udev/rules.d/70-mousefi
 fi
 
 echo "==> installing systemd user service"
-install -Dm644 "contrib/$id.service" "$unit_dir/$id.service"
+mkdir -p "$unit_dir"
+sed "s|@BIN@|$bin|" "contrib/$id.service" > "$unit_dir/$id.service"
 systemctl --user daemon-reload
 systemctl --user enable "$id.service"
 systemctl --user restart "$id.service"
@@ -54,6 +55,10 @@ install -Dm644 internal/ui/icon.svg "$icon"
 mkdir -p "$apps"
 sed "s|@BIN@|$bin|" "contrib/$appid.desktop" > "$apps/$appid.desktop"
 command -v kbuildsycoca6 >/dev/null && kbuildsycoca6 >/dev/null 2>&1 || true
+# Running KDE apps (panel, menu, task switcher) only scan icon folders that
+# existed when they started; ask them to rescan so the new icon shows up.
+command -v dbus-send >/dev/null &&
+	dbus-send --session --type=signal /KIconLoader org.kde.KIconLoader.iconChanged int32:0 || true
 
 echo
 echo "Done. Open \"Buttonsmith\" from the application menu (or run: $id ui)."
